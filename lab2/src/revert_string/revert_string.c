@@ -1,7 +1,17 @@
 #include "revert_string.h"
+#include <stdlib.h>
+#include <string.h>
 
-void RevertString(char *str)
+void RevertString(char* str)
 {
-	// your code here
+    char* temp = (char*)malloc(sizeof(char) * (strlen(str) + 1));
+    int i = strlen(str) - 1;
+    int w = strlen(str) - 1;
+    while (*str != '\0') {
+        *(temp + i) = *str;
+        str++;
+        i--;
+    }
+    *(temp + w + 1) = '\0';
+    strcpy(str - w - 1, temp);
 }
-
