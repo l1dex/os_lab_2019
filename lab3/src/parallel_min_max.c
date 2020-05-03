@@ -1,3 +1,4 @@
+
 #include <ctype.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -12,8 +13,8 @@
 
 #include <getopt.h>
 
-#include "find_min_max.h"
-#include "utils.h"
+#include "find_min_max.c"
+#include "utils.c"
 
 int main(int argc, char **argv) {
   int seed = -1;
@@ -40,18 +41,24 @@ int main(int argc, char **argv) {
         switch (option_index) {
           case 0:
             seed = atoi(optarg);
-            // your code here
-            // error handling
+            if (seed <= 0) {
+                printf("seed is a positive number\n");
+                return 1;
+            }
             break;
           case 1:
             array_size = atoi(optarg);
-            // your code here
-            // error handling
+            if (array_size <= 0) {
+                printf("array_size is a positive number\n");
+                return 1;
+            }
             break;
           case 2:
             pnum = atoi(optarg);
-            // your code here
-            // error handling
+            if (pnum <= 0) {
+                printf("pnum is a positive number\n");
+                return 1;
+            }
             break;
           case 3:
             with_files = true;
@@ -87,24 +94,35 @@ int main(int argc, char **argv) {
   int *array = malloc(sizeof(int) * array_size);
   GenerateArray(array, array_size, seed);
   int active_child_processes = 0;
-
+  
+  int part = array_size/pnum;
+  int pipefd[2];
+  pipe(pipefd);
+  pid_t currentPID;
+  struct MinMax minMaxBuff;
   struct timeval start_time;
   gettimeofday(&start_time, NULL);
-
+  int counterFork = 1;
   for (int i = 0; i < pnum; i++) {
     pid_t child_pid = fork();
+    printf("%d ,forked\n",counterFork);
+    counterFork++;
     if (child_pid >= 0) {
       // successful fork
       active_child_processes += 1;
       if (child_pid == 0) {
+          printf("Iam single child\n");
         // child process
-
         // parallel somehow
-
+        minMaxBuff = GetMinMax(array, i*part, (i == pnum - 1) ? array_size : (i + 1) * part);
         if (with_files) {
           // use files here
+          FILE* outFile = fopen("out.txt", "a");
+          fwrite(&minMaxBuff, sizeof(struct MinMax), 1, outFile);
+          fclose(outFile);
         } else {
           // use pipe here
+          write(pipefd[1], &minMaxBuff, sizeof(struct MinMax));
         }
         return 0;
       }
@@ -114,42 +132,46 @@ int main(int argc, char **argv) {
       return 1;
     }
   }
-
   while (active_child_processes > 0) {
     // your code here
-
+    close(pipefd[1]);
+    wait(NULL);
     active_child_processes -= 1;
   }
-
+  double average_time;
   struct MinMax min_max;
   min_max.min = INT_MAX;
   min_max.max = INT_MIN;
 
   for (int i = 0; i < pnum; i++) {
-    int min = INT_MAX;
-    int max = INT_MIN;
-
     if (with_files) {
-      // read from files
+        FILE* outFile = fopen("out.txt", "rb");
+        fseek(outFile, i*sizeof(struct MinMax), SEEK_SET);
+        fread(&minMaxBuff, sizeof(struct MinMax), 1, outFile);
+        printf("pnum:%i:\tmin:%7i     max:%i\n", i, minMaxBuff.min, minMaxBuff.max);
+        fclose(outFile);
     } else {
-      // read from pipes
+      read(pipefd[0], &minMaxBuff, sizeof(struct MinMax));
+      printf( "pnum:%i\tmin:%7i     max:%i\n", i, minMaxBuff.min, minMaxBuff.max);
     }
 
-    if (min < min_max.min) min_max.min = min;
-    if (max > min_max.max) min_max.max = max;
+    if (minMaxBuff.min < min_max.min)
+        min_max.min = minMaxBuff.min;
+    if (minMaxBuff.max > min_max.max) 
+        min_max.max = minMaxBuff.max;
   }
-
+ 
   struct timeval finish_time;
   gettimeofday(&finish_time, NULL);
 
   double elapsed_time = (finish_time.tv_sec - start_time.tv_sec) * 1000.0;
-  elapsed_time += (finish_time.tv_usec - start_time.tv_usec) / 1000.0;
+  average_time += (finish_time.tv_usec - start_time.tv_usec) / 1000.0;
 
   free(array);
 
   printf("Min: %d\n", min_max.min);
   printf("Max: %d\n", min_max.max);
-  printf("Elapsed time: %fms\n", elapsed_time);
+  printf("AverageTime: %fms\n", average_time);
   fflush(NULL);
   return 0;
 }
