@@ -19,7 +19,8 @@
 pid_t childs[1000];
 int numChilds = 0;
 void dellChilds(int a){
-     printf("WE KILL ALL child!!!\n");
+     printf("Kill childs func\n");
+     printf("Total num of childs - %d\n",numChilds);
     int ret = 0;
     for(int i = 0;i<numChilds;i++){
         kill(childs[i], SIGKILL);
@@ -146,9 +147,10 @@ int main(int argc, char **argv) {
         }
         return 0;
       }
-        childs[numChilds] = child_pid;
-        numChilds = numChilds + 1;
-        sleep(1);
+      
+      childs[numChilds] = child_pid;
+      numChilds = numChilds + 1;
+      sleep(1);  
     } else {
       printf("Fork failed!\n");
       return 1;
