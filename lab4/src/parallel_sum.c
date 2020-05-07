@@ -49,9 +49,14 @@ int Sum(const struct SumArgs *args) {
 }
 
 void *ThreadSum(void *args) {
-  ++SaintNumber;
-  struct SumArgs *sum_args = (struct SumArgs *)args + SaintNumber;
-  sum_args->array = SaintMassive[SaintNumber];
+  int GodValue = ++SaintNumber;
+
+  if(GodValue == 0){
+      printf("\n Zalupa detected - %d \n",SaintMassive[GodValue][0]);
+  }
+
+  struct SumArgs *sum_args = (struct SumArgs *)args + GodValue;
+  sum_args->array = SaintMassive[GodValue];
   printf("\nArray in ThreadSum");
   for(int i = sum_args->begin;i < sum_args->end;i++){
    printf( " %d ",sum_args->array[i - sum_args->begin]);
@@ -129,6 +134,10 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+ if(threads_num >= array_size){
+     printf("\nThreads num < array_size\n");
+     return 1;
+ }
     printf("Show of arg from console: seed = %d, array_size = %d, threads_num = %d\n",seed,array_size,threads_num);
 
   /*
@@ -147,21 +156,33 @@ int main(int argc, char **argv) {
     }
 
   pthread_t threads[threads_num];
-  struct SumArgs args[threads_num];//haahah tvari suka
-  int part = (array_size / threads_num) + 1;
+  struct SumArgs args[threads_num];//haahah tvari 
+  int part = (array_size / threads_num)  + 1;
   SaintMassive = malloc(threads_num * sizeof(int));
   for(int i = 0;i<threads_num;i++){
     args[i].begin = i*part;
     args[i].end = ((i+1)*part <= array_size) ? (i+1)*part : array_size;
-    printf("begin of %d is %d\n",i,args[i].begin);
+    printf("begin of %d is %d Array:",i,args[i].begin);
     args[i].array = (int*) malloc((args[i].end - args[i].begin)*sizeof(int));
     for(int j = args[i].begin; j < args[i].end; j++){
         args[i].array[j - args[i].begin] = array[i*part + j - args[i].begin];
-        printf("%d",args[i].array[j - args[i].begin]);
+        printf(" %d ",args[i].array[j - args[i].begin]);
     } 
-    SaintMassive[i] = args[i].array;
+    printf("\n");
+    if(i == 0){
+        SaintMassive[i] = malloc(part * sizeof(int));
+        for(int j = 0; j < part; j++){
+            SaintMassive[i][j] = args[i].array[j];
+        }
+    }else{
+        SaintMassive[i] = args[i].array;
+    }
   }
-
+ printf("Zalupa with Saint massive ");
+  for(int i = 0 ;i < 4;i++){
+    printf(" %d ",SaintMassive[0][i]);
+  }
+printf("\n");
   for (uint32_t i = 0; i < threads_num; i++) {
     if (pthread_create(&threads[i], NULL, ThreadSum, (void *)&args)) {
       printf("Error: pthread_create failed!\n");
