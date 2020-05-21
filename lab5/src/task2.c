@@ -136,10 +136,10 @@ void result_fac(struct for_fac_struc *struc)
     int mod=struc->mod;
     int i;
     int res = 1;
-    int buf;
+    //int buf;
 
     for (i = begin; i < end; i++) {
-        buf = i % mod;
+        //buf = i % mod;
         res *= i;
         res %= mod;
     }
@@ -149,7 +149,7 @@ void result_fac(struct for_fac_struc *struc)
     *(struc->result) %= mod;
     pthread_mutex_unlock(&mut);
 }
-
+/*
 int factmod (int n, int p) {
 	int res = 1;
 	while (n > 1) {
@@ -161,7 +161,7 @@ int factmod (int n, int p) {
 	}
 	return res % p;
 }
-
+*/
 /*
 void do_one_thing(int *pnum_times) {
   int i, j, x;
