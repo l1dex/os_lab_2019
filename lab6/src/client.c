@@ -14,6 +14,9 @@
 
 #include "lib.h"
 
+#define SADDR struct sockaddr
+#define SLEN sizeof(struct sockaddr_in)
+
 struct Server {
   char ip[255];
   int port;
@@ -161,32 +164,26 @@ int main(int argc, char **argv) {
 
                 struct sockaddr_in server = create_sockaddr(to[i].port, *((unsigned long *)hostname->h_addr));
                 
-                int sck = socket(AF_INET, SOCK_STREAM, 0);
+                int sck = socket(AF_INET, SOCK_DGRAM, 0);
                 if (sck < 0) {
                     fprintf(stderr, "Socket creation failed!\n");
                     exit(1);
                 }
 
-                if (connect(sck, (struct sockaddr *)&server, sizeof(server)) < 0) {
-                    fprintf(stderr, "Connection failed\n");
-                    exit(1);
-                }
+                // if (connect(sck, (struct sockaddr *)&server, sizeof(server)) < 0) {
+                //     fprintf(stderr, "Connection failed\n");
+                //     exit(1);
+                // }
 
                 char task[sizeof(uint64_t) * 3];
                 memcpy(task, &to[i].args.begin, sizeof(uint64_t));
                 memcpy(task + sizeof(uint64_t), &to[i].args.end, sizeof(uint64_t));
                 memcpy(task + 2 * sizeof(uint64_t), &to[i].args.mod, sizeof(uint64_t));
 
-                if (send(sck, task, sizeof(task), 0) < 0) {
-                    fprintf(stderr, "Send failed\n");
-                    exit(1);
-                }
+                sendto(sck, task, sizeof(task), NULL, (SADDR *)&server, SLEN);
                 
-                char response[sizeof(uint64_t)];
-                if (recv(sck, response, sizeof(response), 0) < 0) {
-                    fprintf(stderr, "Recieve failed\n");
-                    exit(1);
-                }
+                char response[256];
+                recvfrom(sck, response, sizeof(response),NULL,(SADDR *)&server, SLEN);
 
                 memcpy(&buf, response, sizeof(uint64_t));
                 
@@ -203,6 +200,7 @@ int main(int argc, char **argv) {
             return 1;
             }
     }
+    printf("cicle ended");
     //wait process;
     int status;
     while (active_child_processes > 0) {

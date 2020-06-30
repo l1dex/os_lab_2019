@@ -14,6 +14,9 @@
 #include "pthread.h"
 #include "lib.h"
 
+#define SADDR struct sockaddr
+#define SLEN sizeof(struct sockaddr_in)
+
 
 //gcc server.c -lpthread -o server.out && ./server.out --port 20001 --tnum 4
 
@@ -86,18 +89,24 @@ int main(int argc, char **argv) {
     }
   }
 
+
   if (port == -1) {
     fprintf(stderr, "Using: %s --port 20001\n", argv[0]);
     return 1;
   }
 
-  int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+  int server_fd = socket(AF_INET, SOCK_DGRAM, 0);
   if (server_fd < 0) {
     fprintf(stderr, "Can not create server socket!");
     return 1;
   }
 
-  struct sockaddr_in server = create_sockaddr(port, htonl(INADDR_ANY));
+  struct sockaddr_in server;
+  struct sockaddr_in cliaddr;
+    memset(&server, 0, SLEN);
+  server.sin_family = AF_INET;
+  server.sin_addr.s_addr = htonl(INADDR_ANY);
+  server.sin_port = htons(port);
 
   int opt_val = 1;
   setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt_val, sizeof(opt_val));
@@ -108,38 +117,29 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  err = listen(server_fd, 128);
-  if (err < 0) {
-    fprintf(stderr, "Could not listen on socket\n");
-    return 1;
-  }
+//   err = listen(server_fd, 128);
+//   if (err < 0) {
+//     fprintf(stderr, "Could not listen on socket\n");
+//     return 1;
+//   }
 
   printf("Server listening at %d\n", port);
 
-  while (true) {
-    struct sockaddr_in client;
-    socklen_t client_len = sizeof(client);
-    int client_fd = accept(server_fd, (struct sockaddr *)&client, &client_len);
+    //struct sockaddr_in client;
+    //socklen_t client_len = sizeof(client);
+    //int client_fd = accept(server_fd, (struct sockaddr *)&client, &client_len);
 
-    if (client_fd < 0) {
-      fprintf(stderr, "Could not establish new connection\n");
-      continue;
-    }
+    // if (client_fd < 0) {
+    //   fprintf(stderr, "Could not establish new connection\n");
+    //   continue;
+    // }
 
-    while (true) {
       unsigned int buffer_size = sizeof(uint64_t) * 3;
       char from_client[buffer_size];
-      int read = recv(client_fd, from_client, buffer_size, 0);
-
-      if (!read)
-        break;
-      if (read < 0) {
+      if (recvfrom(server_fd, from_client, sizeof(from_client),NULL,(SADDR *)&cliaddr, SLEN) == -1){
         fprintf(stderr, "Client read failed\n");
-        break;
-      }
-      if (read < buffer_size) {
-        fprintf(stderr, "Client send wrong data format\n");
-        break;
+        perror("read - ");
+        //return 1;
       }
 
       pthread_t threads;
@@ -177,16 +177,13 @@ int main(int argc, char **argv) {
       char buffer[256];
       sprintf(buffer, "%d", total);
 
-      err = send(client_fd, buffer, sizeof(total), 0);
-      if (err < 0) {
-        fprintf(stderr, "Can't send data to client\n");
-        break;
-      }
-    }
+      if(sendto(server_fd, buffer, sizeof(buffer),NULL,(SADDR *)&cliaddr, SLEN) == -1){
 
-    shutdown(client_fd, SHUT_RDWR);
-    close(client_fd);
-  }
+        perror("send to error - ");
+      }
+
+    // shutdown(client_fd, SHUT_RDWR);
+    // close(client_fd);
 
   return 0;
 }
