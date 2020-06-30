@@ -159,33 +159,39 @@ int main(int argc, char **argv) {
                 struct hostent *hostname = gethostbyname(to[i].ip);
                 if (hostname == NULL) {
                     fprintf(stderr, "gethostbyname failed with %s\n", to[i].ip);
-                    exit(1);
+                    //exit(1);
                 }
 
                 struct sockaddr_in server = create_sockaddr(to[i].port, *((unsigned long *)hostname->h_addr));
+                //   struct sockaddr_in server;
+                //   memset(&server, 0, sizeof(server));
+                //   server.sin_family = AF_INET;
+                //   server.sin_port = htons(to[i].port);
+                //   server.sin_addr.s_addr = INADDR_ANY;
+  
                 
                 int sck = socket(AF_INET, SOCK_DGRAM, 0);
                 if (sck < 0) {
                     fprintf(stderr, "Socket creation failed!\n");
-                    exit(1);
+                    //exit(1);
                 }
 
                 // if (connect(sck, (struct sockaddr *)&server, sizeof(server)) < 0) {
                 //     fprintf(stderr, "Connection failed\n");
                 //     exit(1);
                 // }
-
                 char task[sizeof(uint64_t) * 3];
                 memcpy(task, &to[i].args.begin, sizeof(uint64_t));
                 memcpy(task + sizeof(uint64_t), &to[i].args.end, sizeof(uint64_t));
                 memcpy(task + 2 * sizeof(uint64_t), &to[i].args.mod, sizeof(uint64_t));
 
+                
                 sendto(sck, task, sizeof(task), NULL, (SADDR *)&server, SLEN);
                 
-                char response[256];
-                recvfrom(sck, response, sizeof(response),NULL,(SADDR *)&server, SLEN);
+                char response[sizeof(uint64_t)];
+                recvfrom(sck, response, sizeof(response),NULL,NULL, NULL);
 
-                memcpy(&buf, response, sizeof(uint64_t));
+                memcpy(buf, response, sizeof(uint64_t));
                 
                 flock(file_pipe, "LOCK_EX");
                 write(file_pipe[1], buf, strlen(buf));

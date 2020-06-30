@@ -102,11 +102,11 @@ int main(int argc, char **argv) {
   }
 
   struct sockaddr_in server;
-  struct sockaddr_in cliaddr;
     memset(&server, 0, SLEN);
   server.sin_family = AF_INET;
   server.sin_addr.s_addr = htonl(INADDR_ANY);
   server.sin_port = htons(port);
+  struct sockaddr_in cliaddr;
 
   int opt_val = 1;
   setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt_val, sizeof(opt_val));
@@ -136,7 +136,8 @@ int main(int argc, char **argv) {
 
       unsigned int buffer_size = sizeof(uint64_t) * 3;
       char from_client[buffer_size];
-      if (recvfrom(server_fd, from_client, sizeof(from_client),NULL,(SADDR *)&cliaddr, SLEN) == -1){
+      unsigned int si = sizeof(cliaddr);
+      if (recvfrom(server_fd, from_client, sizeof(from_client),NULL,(SADDR *)&cliaddr, &si) == -1){
         fprintf(stderr, "Client read failed\n");
         perror("read - ");
         //return 1;
@@ -173,12 +174,11 @@ int main(int argc, char **argv) {
       }
 
       printf("Total: %llu\n", total);
-        
-      char buffer[256];
+      char buffer[sizeof(uint64_t)];
       sprintf(buffer, "%d", total);
-
-      if(sendto(server_fd, buffer, sizeof(buffer),NULL,(SADDR *)&cliaddr, SLEN) == -1){
-
+      //memcpy(buffer, &total, sizeof(uint64_t));
+      printf("buffer - %s",buffer);
+      if(sendto(server_fd, buffer, sizeof(buffer),NULL,(SADDR *)&cliaddr, si) == -1){
         perror("send to error - ");
       }
 
